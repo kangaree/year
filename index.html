@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Year Calendar</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Calendar Container */
+        .calendar-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); /* 6 columns */
+            grid-template-rows: repeat(2, 1fr);   /* 2 rows */
+            gap: 10px;
+            padding: 15px;
+            justify-items: center;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        /* Month Container */
+        .month {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 0.75em; /* Reduced font size for better fit */
+        }
+
+        /* Month Header */
+        .month-header {
+            background-color: #007bff;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-size: 1em;
+        }
+
+        /* Days of the Week */
+        .days-of-week {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background-color: #f1f1f1;
+            padding: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .days-of-week div {
+            padding: 5px;
+        }
+
+        /* Days Grid */
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            padding: 5px;
+            background-color: #fff;
+            overflow-y: auto;
+            height: calc(100% - 50px); /* Ensure days fit within the available space */
+        }
+
+        .day {
+            padding: 8px;
+            text-align: center;
+        }
+
+        .empty {
+            background-color: #f9f9f9;
+        }
+
+        /* Highlight the current day (remove the yellow background) */
+        .highlighted {
+            border: 2px solid #007bff; /* Add a border instead of background */
+            font-weight: bold;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .calendar-container {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns for smaller screens */
+                grid-template-rows: repeat(6, 1fr); /* 6 rows for smaller screens */
+            }
+
+            .month {
+                height: auto;
+            }
+
+            .day {
+                padding: 7px; /* Slightly smaller padding for mobile */
+            }
+
+            .month-header {
+                font-size: 0.9em; /* Smaller font size for better mobile view */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .calendar-container {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns for mobile */
+                grid-template-rows: repeat(6, 1fr); /* 6 rows for mobile */
+                padding: 10px;
+            }
+
+            .month {
+                height: auto;
+                max-width: 100%;
+                font-size: 0.5em; /* Ensures all text stays small */
+                overflow-y: visible; /* Allow overflow for days grid */
+            }
+
+            .day {
+                padding: 0;
+                font-size: 0.2em; /* Smaller font size for better mobile view */
+            }
+
+            .month-header {
+                font-size: 0.2em; /* Smaller header font size */
+            }
+
+            /* Ensure that the days grid takes the full height and scrolls if needed */
+            .days {
+                height: auto;
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calendar-container" id="calendar-container"></div>
+
+    <script>
+        // Function to get the date of the 3rd Monday in January (MLK Day)
+        const getMLKDay = (year) => {
+            const date = new Date(year, 0, 1); // Start with the 1st of January
+            const dayOfWeek = date.getDay(); // Get the day of the week
+            const offset = (dayOfWeek <= 1 ? 16 - dayOfWeek : 23 - dayOfWeek); // Adjust to the 3rd Monday
+            date.setDate(offset); // Set the date to the 3rd Monday
+            return date;
+        };
+
+        // Function to get the date of the last Monday in May (Memorial Day)
+        const getMemorialDay = (year) => {
+            const date = new Date(year, 4, 31); // Start with the 31st of May
+            const dayOfWeek = date.getDay(); // Get the day of the week
+            const offset = (dayOfWeek === 1 ? 0 : 9 - dayOfWeek); // Adjust to the last Monday
+            date.setDate(31 - offset); // Set the date to the last Monday in May
+            return date;
+        };
+
+        // Function to get the date of the first Monday in September (Labor Day)
+        const getLaborDay = (year) => {
+            const date = new Date(year, 8, 1); // Start with the 1st of September
+            const dayOfWeek = date.getDay(); // Get the day of the week
+            const offset = (dayOfWeek === 0 ? 1 + 1 : 7 - dayOfWeek + 1); // Adjust to the first Monday
+            date.setDate(offset); // Set the date to the first Monday in September
+            return date;
+        };
+
+        // Function to get the date of the 4th Thursday in November (Thanksgiving)
+        const getThanksgiving = (year) => {
+            const date = new Date(year, 10, 1); // Start with the 1st of November
+            const dayOfWeek = date.getDay(); // Get the day of the week
+            const firstThursday = dayOfWeek <= 4 ? 4 - dayOfWeek : 11 - dayOfWeek;
+            date.setDate(1 + firstThursday + 21); // Add 21 days to get to the 4th Thursday
+            return date;
+        };
+
+        // US Holidays with corresponding dates and emojis
+        const usHolidays = (year) => {
+            const mlkDay = getMLKDay(year);
+            const memorialDay = getMemorialDay(year);
+            const laborDay = getLaborDay(year);
+            const thanksgiving = getThanksgiving(year);
+
+            return {
+                "January 1": "🎉",         // New Year's Day
+                [`January ${mlkDay.getDate()}`]: "⚖️",  // MLK Day
+                "February 14": "❤️",       // Valentine's Day
+                [`May ${memorialDay.getDate()}`]: "🇺🇸", // Memorial Day
+                "July 4": "🎆",            // Independence Day
+                [`September ${laborDay.getDate()}`]: "👷‍♀️", // Labor Day
+                "October 31": "🎃",        // Halloween
+                [`November ${thanksgiving.getDate()}`]: "🦃", // Thanksgiving
+                "December 25": "🎅",        // Christmas
+                "February 29": "🤸‍♀️",        // Leap Day
+            };
+        };
+
+        // Function to render the calendar for the current year
+        const renderCalendar = () => {
+            const currentYear = new Date().getFullYear();
+            const currentDate = new Date(); // Get today's date
+            const currentMonth = currentDate.getMonth(); // Current month (0-11)
+            const currentDay = currentDate.getDate(); // Current day of the month (1-31)
+            
+            const holidays = usHolidays(currentYear); // Get holidays for the current year
+
+            const calendarContainer = document.getElementById('calendar-container');
+            calendarContainer.innerHTML = ''; // Clear any previous calendar
+
+            for (let month = 0; month < 12; month++) {
+                const monthData = generateMonthData(currentYear, month);
+                const monthElement = createMonthElement(monthData, month, currentMonth, currentDay, holidays);
+                calendarContainer.appendChild(monthElement);
+            }
+        };
+
+        // Function to generate data for a specific month
+        const generateMonthData = (year, month) => {
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+            const firstDayOfWeek = firstDayOfMonth.getDay(); // Day of the week (0 - Sunday, 6 - Saturday)
+
+            const days = [];
+            for (let i = 1; i <= lastDateOfMonth; i++) {
+                days.push(i);
+            }
+
+            const emptyDays = Array(firstDayOfWeek).fill(null); // Add empty days at the start of the month
+
+            return {
+                monthName: firstDayOfMonth.toLocaleString('default', { month: 'long' }),
+                days: [...emptyDays, ...days],
+                lastDateOfMonth,
+                firstDayOfWeek
+            };
+        };
+
+        // Function to create the month view and highlight the current day
+        const createMonthElement = (monthData, monthIndex, currentMonth, currentDay, holidays) => {
+            const monthElement = document.createElement('div');
+            monthElement.classList.add('month');
+
+            // Month Header
+            const monthHeader = document.createElement('div');
+            monthHeader.classList.add('month-header');
+            monthHeader.textContent = monthData.monthName;
+            monthElement.appendChild(monthHeader);
+
+            // Days of the Week
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const daysOfWeekElement = document.createElement('div');
+            daysOfWeekElement.classList.add('days-of-week');
+            daysOfWeek.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.textContent = day;
+                daysOfWeekElement.appendChild(dayElement);
+            });
+            monthElement.appendChild(daysOfWeekElement);
+
+            // Days
+            const daysElement = document.createElement('div');
+            daysElement.classList.add('days');
+            monthData.days.forEach((day, index) => {
+                const dayElement = document.createElement('div');
+                if (day === null) {
+                    dayElement.classList.add('empty');
+                } else {
+                    dayElement.classList.add('day');
+
+                    // Check if this day is a holiday and replace with emoji
+                    const holidayKey = `${monthData.monthName} ${day}`;
+                    const holidayEmoji = holidays[holidayKey];
+
+                    // If it's a holiday, show the emoji
+                    if (holidayEmoji) {
+                        dayElement.textContent = holidayEmoji;
+                    } else {
+                        dayElement.textContent = day;
+                    }
+
+                    // Highlight the current day
+                    if (monthIndex === currentMonth && day === currentDay) {
+                        dayElement.classList.add('highlighted');
+                    }
+                }
+                daysElement.appendChild(dayElement);
+            });
+            monthElement.appendChild(daysElement);
+
+            return monthElement;
+        };
+
+        // Initial render
+        renderCalendar();
+    </script>
+</body>
+</html>
